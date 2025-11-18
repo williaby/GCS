@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from gcs_utilities import GCSClient, GCSConfigError, GCSNotFoundError
+from gcs_utilities import GCSClient, GCSConfigError, GCSNotFoundError, GCSUploadError
 
 
 class TestGCSClientInit:
@@ -152,3 +152,143 @@ class TestGCSClientIntegration:
         """Test deleting non-existent file with ignore_missing=True."""
         deleted = client.delete_file("nonexistent.txt", ignore_missing=True)
         assert deleted is False
+
+
+class TestGCSClientSecurity:
+    """Tests for security features and edge cases."""
+
+    def test_sanitize_gcs_path_removes_leading_slash(self):
+        """Test that leading slashes are removed from GCS paths."""
+        sanitized = GCSClient._sanitize_gcs_path("/path/to/file.txt")
+        assert sanitized == "path/to/file.txt"
+        assert not sanitized.startswith("/")
+
+    def test_sanitize_gcs_path_rejects_empty(self):
+        """Test that empty paths are rejected."""
+        with pytest.raises(ValueError, match="cannot be empty"):
+            GCSClient._sanitize_gcs_path("")
+
+        with pytest.raises(ValueError, match="cannot be empty"):
+            GCSClient._sanitize_gcs_path("   ")
+
+    def test_sanitize_gcs_path_rejects_parent_traversal(self):
+        """Test that paths with '..' are rejected."""
+        with pytest.raises(ValueError, match="cannot contain '..' segments"):
+            GCSClient._sanitize_gcs_path("path/../file.txt")
+
+        with pytest.raises(ValueError, match="cannot contain '..' segments"):
+            GCSClient._sanitize_gcs_path("../secrets.txt")
+
+    def test_validate_local_path_resolves_absolute(self):
+        """Test that local paths are resolved to absolute paths."""
+        test_path = Path("test.txt")
+        resolved = GCSClient._validate_local_path(test_path, must_exist=False)
+        assert resolved.is_absolute()
+
+    def test_validate_local_path_checks_existence(self):
+        """Test that path existence is validated when required."""
+        with pytest.raises(FileNotFoundError):
+            GCSClient._validate_local_path(
+                Path("/nonexistent/file.txt"), must_exist=True
+            )
+
+    def test_context_manager_support(self):
+        """Test that client can be used as a context manager."""
+        # Clear environment to test context manager cleanup
+        old_key = os.environ.get("GCP_SA_KEY")
+
+        if old_key:
+            try:
+                with GCSClient() as client:
+                    assert client is not None
+                    assert hasattr(client, "close")
+                # After context exit, credentials should be cleaned up
+            finally:
+                pass  # Cleanup handled by context manager
+
+    def test_close_method_cleanup(self):
+        """Test that close() method cleans up credentials."""
+        old_key = os.environ.get("GCP_SA_KEY")
+
+        if old_key:
+            client = GCSClient()
+            creds_path = client._credentials_path
+
+            client.close()
+
+            # Credentials path should be cleaned
+            if creds_path:
+                assert not os.path.exists(creds_path)
+
+
+@pytest.mark.skipif(
+    not os.getenv("GCP_SA_KEY") and not os.getenv("GOOGLE_APPLICATION_CREDENTIALS"),
+    reason="GCS credentials not configured"
+)
+class TestGCSClientSecurityIntegration:
+    """Integration tests for security features."""
+
+    @pytest.fixture
+    def client(self):
+        """Create a GCS client for testing."""
+        return GCSClient()
+
+    def test_upload_invalid_gcs_path_with_parent_traversal(self, client):
+        """Test that uploading with '..' in GCS path fails."""
+        with tempfile.NamedTemporaryFile(mode="w", delete=False) as f:
+            f.write("test")
+            temp_path = f.name
+
+        try:
+            with pytest.raises(ValueError, match="cannot contain '..' segments"):
+                client.upload_file(temp_path, "../evil/path.txt")
+        finally:
+            os.unlink(temp_path)
+
+    def test_upload_nonexistent_local_file(self, client):
+        """Test that uploading nonexistent file raises error."""
+        with pytest.raises(FileNotFoundError):
+            client.upload_file("/nonexistent/file.txt", "test/file.txt")
+
+    def test_upload_directory_instead_of_file(self, client):
+        """Test that uploading a directory as file raises error."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with pytest.raises(ValueError, match="not a file"):
+                client.upload_file(tmpdir, "test/file.txt")
+
+    def test_download_invalid_gcs_path(self, client):
+        """Test that downloading with invalid GCS path fails."""
+        with pytest.raises(ValueError):
+            client.download_file("../evil/path.txt", "local.txt")
+
+    def test_context_manager_with_operations(self, client):
+        """Test context manager with actual file operations."""
+        gcs_path = "test/context_test.txt"
+
+        with tempfile.NamedTemporaryFile(mode="w", delete=False) as f:
+            f.write("Context manager test")
+            temp_path = f.name
+
+        try:
+            with GCSClient() as ctx_client:
+                # Upload
+                ctx_client.upload_file(temp_path, gcs_path)
+                assert ctx_client.file_exists(gcs_path)
+
+                # Download
+                with tempfile.TemporaryDirectory() as tmpdir:
+                    download_path = os.path.join(tmpdir, "downloaded.txt")
+                    ctx_client.download_file(gcs_path, download_path)
+                    assert os.path.exists(download_path)
+
+                # Cleanup
+                ctx_client.delete_file(gcs_path)
+
+            # After context exit, client should be closed
+            # (credentials cleaned up)
+
+        finally:
+            os.unlink(temp_path)
+            # Ensure GCS file is cleaned up
+            if client.file_exists(gcs_path):
+                client.delete_file(gcs_path)
