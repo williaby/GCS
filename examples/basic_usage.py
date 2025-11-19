@@ -89,7 +89,7 @@ def example_directory_upload():
             "examples/sample_directory"
         )
 
-        print(f"\n📊 Upload Statistics:")
+        print("\n📊 Upload Statistics:")
         print(f"   Files uploaded: {stats['files_uploaded']}")
         print(f"   Total bytes: {stats['total_bytes']:,}")
         print(f"   Failed: {len(stats['failed'])}")
@@ -146,7 +146,7 @@ def example_file_operations():
 
         # Get metadata
         metadata = client.get_file_metadata(test_file)
-        print(f"\n📊 File Metadata:")
+        print("\n📊 File Metadata:")
         print(f"   Name: {metadata['name']}")
         print(f"   Size: {metadata['size']} bytes")
         print(f"   Content Type: {metadata['content_type']}")
@@ -155,7 +155,7 @@ def example_file_operations():
 
         # Delete file
         client.delete_file(test_file)
-        print(f"\n🗑️  File deleted")
+        print("\n🗑️  File deleted")
 
         # Verify deletion
         exists = client.file_exists(test_file)
@@ -210,7 +210,7 @@ def example_download_as_text():
 
         # Download as text
         content = client.download_as_text("examples/config.json")
-        print(f"\n📄 Downloaded content (as text):")
+        print("\n📄 Downloaded content (as text):")
         print(content)
 
         # Parse JSON

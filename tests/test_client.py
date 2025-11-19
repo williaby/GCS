@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from gcs_utilities import GCSClient, GCSConfigError, GCSNotFoundError, GCSUploadError
+from gcs_utilities import GCSClient, GCSConfigError, GCSNotFoundError
 
 
 class TestGCSClientInit:
@@ -81,7 +81,7 @@ class TestGCSClientIntegration:
                 result = client.download_file(gcs_path, download_path)
 
                 assert os.path.exists(result)
-                with open(result, "r") as f:
+                with open(result) as f:
                     content = f.read()
                 assert content == "Test content for GCS utilities"
 

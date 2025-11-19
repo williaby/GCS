@@ -7,10 +7,10 @@ import logging
 import os
 import tempfile
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from google.cloud import storage
-from google.cloud.exceptions import NotFound, GoogleCloudError
+from google.cloud.exceptions import GoogleCloudError, NotFound
 
 from .exceptions import (
     GCSAuthError,
@@ -58,9 +58,9 @@ class GCSClient:
 
     def __init__(
         self,
-        service_account_key_b64: Optional[str] = None,
-        bucket_name: Optional[str] = None,
-        project_id: Optional[str] = None,
+        service_account_key_b64: str | None = None,
+        bucket_name: str | None = None,
+        project_id: str | None = None,
         auto_create_bucket: bool = False,
     ):
         """Initialize GCS client.
@@ -76,7 +76,7 @@ class GCSClient:
             GCSAuthError: If authentication fails.
             GCSConfigError: If required configuration is missing.
         """
-        self._credentials_path: Optional[str] = None
+        self._credentials_path: str | None = None
         self._cleanup_registered = False
         self.bucket_name = bucket_name or os.getenv("GCS_BUCKET")
         self.project_id = project_id
@@ -100,7 +100,7 @@ class GCSClient:
                 "for each operation or call set_bucket()."
             )
 
-    def _setup_credentials(self, service_account_key_b64: Optional[str] = None) -> None:
+    def _setup_credentials(self, service_account_key_b64: str | None = None) -> None:
         """Setup GCS credentials from base64-encoded service account key.
 
         Args:
@@ -254,9 +254,9 @@ class GCSClient:
         self,
         local_path: str,
         gcs_path: str,
-        bucket_name: Optional[str] = None,
-        content_type: Optional[str] = None,
-        metadata: Optional[dict[str, str]] = None,
+        bucket_name: str | None = None,
+        content_type: str | None = None,
+        metadata: dict[str, str] | None = None,
     ) -> str:
         """Upload a single file to GCS.
 
@@ -303,9 +303,9 @@ class GCSClient:
         self,
         local_dir: str,
         gcs_prefix: str,
-        bucket_name: Optional[str] = None,
+        bucket_name: str | None = None,
         pattern: str = DEFAULT_FILE_PATTERN,
-        exclude_patterns: Optional[list[str]] = None,
+        exclude_patterns: list[str] | None = None,
     ) -> dict[str, Any]:
         """Upload a directory to GCS, preserving structure.
 
@@ -378,7 +378,7 @@ class GCSClient:
         self,
         gcs_path: str,
         local_path: str,
-        bucket_name: Optional[str] = None,
+        bucket_name: str | None = None,
         create_dirs: bool = True,
     ) -> str:
         """Download a single file from GCS.
@@ -427,7 +427,7 @@ class GCSClient:
     def download_as_bytes(
         self,
         gcs_path: str,
-        bucket_name: Optional[str] = None,
+        bucket_name: str | None = None,
     ) -> bytes:
         """Download a file from GCS as bytes.
 
@@ -459,7 +459,7 @@ class GCSClient:
     def download_as_text(
         self,
         gcs_path: str,
-        bucket_name: Optional[str] = None,
+        bucket_name: str | None = None,
         encoding: str = "utf-8",
     ) -> str:
         """Download a file from GCS as text.
@@ -492,10 +492,10 @@ class GCSClient:
 
     def list_files(
         self,
-        prefix: Optional[str] = None,
-        bucket_name: Optional[str] = None,
-        max_results: Optional[int] = None,
-        delimiter: Optional[str] = None,
+        prefix: str | None = None,
+        bucket_name: str | None = None,
+        max_results: int | None = None,
+        delimiter: str | None = None,
     ) -> list[dict[str, Any]]:
         """List files in GCS bucket.
 
@@ -538,7 +538,7 @@ class GCSClient:
     def delete_file(
         self,
         gcs_path: str,
-        bucket_name: Optional[str] = None,
+        bucket_name: str | None = None,
         ignore_missing: bool = False,
     ) -> bool:
         """Delete a file from GCS.
@@ -570,14 +570,14 @@ class GCSClient:
             else:
                 raise GCSNotFoundError(
                     f"File does not exist in GCS: gs://{bucket.name}/{gcs_path}"
-                )
+                ) from None
         except GoogleCloudError as e:
             raise GCSDownloadError(f"Failed to delete gs://{bucket.name}/{gcs_path}: {e}") from e
 
     def delete_directory(
         self,
         prefix: str,
-        bucket_name: Optional[str] = None,
+        bucket_name: str | None = None,
     ) -> int:
         """Delete all files with a given prefix (directory-like deletion).
 
@@ -608,7 +608,7 @@ class GCSClient:
     def file_exists(
         self,
         gcs_path: str,
-        bucket_name: Optional[str] = None,
+        bucket_name: str | None = None,
     ) -> bool:
         """Check if a file exists in GCS.
 
@@ -627,7 +627,7 @@ class GCSClient:
     def get_file_metadata(
         self,
         gcs_path: str,
-        bucket_name: Optional[str] = None,
+        bucket_name: str | None = None,
     ) -> dict[str, Any]:
         """Get metadata for a file in GCS.
 
@@ -662,7 +662,7 @@ class GCSClient:
             "uri": f"gs://{bucket.name}/{blob.name}",
         }
 
-    def _get_bucket(self, bucket_name: Optional[str] = None) -> storage.Bucket:
+    def _get_bucket(self, bucket_name: str | None = None) -> storage.Bucket:
         """Get bucket object, using default if not specified.
 
         Args:
