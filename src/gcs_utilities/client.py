@@ -214,15 +214,16 @@ class GCSClient:
         try:
             # Resolve to absolute path to prevent traversal attacks
             resolved_path = path.resolve()
-
-            # Check if path exists when required
-            if must_exist and not resolved_path.exists():
-                raise FileNotFoundError(f"Path does not exist: {path}")
-
-            return resolved_path
-
         except (OSError, RuntimeError) as e:
             raise ValueError(f"Invalid path: {path} - {e}") from e
+
+        # Check if path exists when required. This is intentionally outside the
+        # try/except above: FileNotFoundError is a subclass of OSError, so
+        # raising it inside the try would be swallowed and re-raised as ValueError.
+        if must_exist and not resolved_path.exists():
+            raise FileNotFoundError(f"Path does not exist: {path}")
+
+        return resolved_path
 
     @staticmethod
     def _sanitize_gcs_path(gcs_path: str) -> str:
