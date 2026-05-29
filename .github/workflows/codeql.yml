@@ -54,7 +54,7 @@ jobs:
           enable-cache: true
 
       - name: Install dependencies
-        run: uv sync --no-dev
+        run: uv sync --no-dev --frozen
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@48ab28a6f5dbc2a99bf1e0131198dd8f1df78169 # v3.28.0

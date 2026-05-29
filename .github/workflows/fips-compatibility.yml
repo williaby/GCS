@@ -16,14 +16,14 @@ on:
     paths:
       - 'src/**/*.py'
       - 'pyproject.toml'
-      - 'requirements*.txt'
+      - 'uv.lock'
       - '.github/workflows/fips-compatibility.yml'
   pull_request:
     branches: [main, master]
     paths:
       - 'src/**/*.py'
       - 'pyproject.toml'
-      - 'requirements*.txt'
+      - 'uv.lock'
   schedule:
     - cron: '0 10 * * 1'
   workflow_dispatch:
