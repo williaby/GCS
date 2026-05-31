@@ -34,6 +34,7 @@ dev = [
     "black>=23.0.0",
     "ruff>=0.1.0",
     "mypy>=1.0.0",
+    "pydoclint>=0.8.4",
 ]
 
 [tool.setuptools.packages.find]
@@ -68,6 +69,16 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S101"]
 "examples/*" = ["T201"]
+
+[tool.pydoclint]
+style = "google"
+exclude = '\.git|tests/|scripts/|benchmarks/|tools/|noxfile\.py|\.claude/'
+arg-type-hints-in-docstring = true
+arg-type-hints-in-signature = true
+skip-checking-raises = false
+require-return-section-when-returning-nothing = false
+require-return-section-when-returning-values = false
+require-yield-section-when-yielding-values = false
 
 [tool.mypy]
 python_version = "3.10"

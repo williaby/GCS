@@ -1,0 +1,9 @@
+repos:
+  - repo: https://github.com/jsh9/pydoclint
+    rev: 88d83c94156c5e51a09938e77019f2c58e92ab58  # 0.8.4
+    hooks:
+      - id: pydoclint
+        args: ["--config=pyproject.toml"]
+        types: [python]
+        stages: [pre-commit]
+        exclude: ^(tests|scripts|benchmarks|tools)/
