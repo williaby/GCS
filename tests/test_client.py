@@ -36,7 +36,7 @@ class TestGCSClientInit:
 # Integration tests (require valid credentials)
 @pytest.mark.skipif(
     not os.getenv("GCP_SA_KEY") and not os.getenv("GOOGLE_APPLICATION_CREDENTIALS"),
-    reason="GCS credentials not configured"
+    reason="GCS credentials not configured",
 )
 class TestGCSClientIntegration:
     """Integration tests for GCSClient.
@@ -188,9 +188,7 @@ class TestGCSClientSecurity:
     def test_validate_local_path_checks_existence(self):
         """Test that path existence is validated when required."""
         with pytest.raises(FileNotFoundError):
-            GCSClient._validate_local_path(
-                Path("/nonexistent/file.txt"), must_exist=True
-            )
+            GCSClient._validate_local_path(Path("/nonexistent/file.txt"), must_exist=True)
 
     def test_context_manager_support(self):
         """Test that client can be used as a context manager."""
@@ -223,7 +221,7 @@ class TestGCSClientSecurity:
 
 @pytest.mark.skipif(
     not os.getenv("GCP_SA_KEY") and not os.getenv("GOOGLE_APPLICATION_CREDENTIALS"),
-    reason="GCS credentials not configured"
+    reason="GCS credentials not configured",
 )
 class TestGCSClientSecurityIntegration:
     """Integration tests for security features."""
