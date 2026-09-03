@@ -214,15 +214,19 @@ class GCSClient:
         try:
             # Resolve to absolute path to prevent traversal attacks
             resolved_path = path.resolve()
-
-            # Check if path exists when required
-            if must_exist and not resolved_path.exists():
-                raise FileNotFoundError(f"Path does not exist: {path}")
-
-            return resolved_path
-
         except (OSError, RuntimeError) as e:
+            # #EDGE: FileNotFoundError is an OSError subclass, so the
+            # existence check below must run outside this try/except.
+            # Catching it here would silently rewrap the documented
+            # FileNotFoundError contract as ValueError.
+            # #VERIFY: keep this split if resolve()'s exception types change.
             raise ValueError(f"Invalid path: {path} - {e}") from e
+
+        # Check if path exists when required
+        if must_exist and not resolved_path.exists():
+            raise FileNotFoundError(f"Path does not exist: {path}")
+
+        return resolved_path
 
     @staticmethod
     def _sanitize_gcs_path(gcs_path: str) -> str:
@@ -365,8 +369,7 @@ class GCSClient:
 
         total_mb = stats["total_bytes"] / BYTES_PER_MB
         logger.info(
-            f"\n📦 Upload complete: {stats['files_uploaded']} files, "
-            f"{total_mb:.2f} MB total"
+            f"\n📦 Upload complete: {stats['files_uploaded']} files, {total_mb:.2f} MB total"
         )
 
         if stats["failed"]:
@@ -420,9 +423,7 @@ class GCSClient:
             return str(local_file)
 
         except GoogleCloudError as e:
-            raise GCSDownloadError(
-                f"Failed to download gs://{bucket.name}/{gcs_path}: {e}"
-            ) from e
+            raise GCSDownloadError(f"Failed to download gs://{bucket.name}/{gcs_path}: {e}") from e
 
     def download_as_bytes(
         self,
@@ -452,9 +453,7 @@ class GCSClient:
         try:
             return blob.download_as_bytes()
         except GoogleCloudError as e:
-            raise GCSDownloadError(
-                f"Failed to download gs://{bucket.name}/{gcs_path}: {e}"
-            ) from e
+            raise GCSDownloadError(f"Failed to download gs://{bucket.name}/{gcs_path}: {e}") from e
 
     def download_as_text(
         self,
@@ -486,9 +485,7 @@ class GCSClient:
         try:
             return blob.download_as_text(encoding=encoding)
         except (GoogleCloudError, UnicodeDecodeError) as e:
-            raise GCSDownloadError(
-                f"Failed to download gs://{bucket.name}/{gcs_path}: {e}"
-            ) from e
+            raise GCSDownloadError(f"Failed to download gs://{bucket.name}/{gcs_path}: {e}") from e
 
     def list_files(
         self,
@@ -522,13 +519,15 @@ class GCSClient:
 
             files = []
             for blob in blobs:
-                files.append({
-                    "name": blob.name,
-                    "size": blob.size,
-                    "updated": blob.updated,
-                    "content_type": blob.content_type,
-                    "uri": f"gs://{bucket.name}/{blob.name}",
-                })
+                files.append(
+                    {
+                        "name": blob.name,
+                        "size": blob.size,
+                        "updated": blob.updated,
+                        "content_type": blob.content_type,
+                        "uri": f"gs://{bucket.name}/{blob.name}",
+                    }
+                )
 
             return files
 
