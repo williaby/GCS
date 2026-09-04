@@ -130,6 +130,7 @@ class TestCredentialSetup:
         finally:
             instance.close()
 
+    @pytest.mark.skipif(os.name == "nt", reason="POSIX permission bits are not enforced on Windows")
     def test_credentials_file_is_owner_only(self, service_account_b64, storage_client_cls):
         instance = GCSClient(service_account_key_b64=service_account_b64)
         try:

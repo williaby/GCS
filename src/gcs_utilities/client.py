@@ -346,8 +346,9 @@ class GCSClient:
                 logger.debug(f"Skipping excluded file: {rel_path}")
                 continue
 
-            # Construct GCS path
-            gcs_path = f"{gcs_prefix.rstrip('/')}/{rel_path}"
+            # Construct GCS path. as_posix() keeps the blob name separator as
+            # "/" on every platform; str(rel_path) would emit "\\" on Windows.
+            gcs_path = f"{gcs_prefix.rstrip('/')}/{rel_path.as_posix()}"
 
             try:
                 blob = bucket.blob(gcs_path)
